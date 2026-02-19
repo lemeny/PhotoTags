@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PhotoTags - 图片标签管理</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+<main class="container">
+    <h1>PhotoTags</h1>
+    <p class="description">给 meme 和其他照片打多个标签，然后按标签筛选展示。兼容 iOS HEIC/HEIF（自动转 JPEG），并支持离线同步标签数据。</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <ul class="messages">
+        {% for category, message in messages %}
+        <li class="message {{ category }}">{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+    <section class="card">
+        <h2>上传图片并设置标签</h2>
+        <form action="{{ url_for('upload_photo') }}" method="post" enctype="multipart/form-data" class="stack">
+            <label>
+                选择图片
+                <input type="file" name="photo" accept="image/*,.heic,.heif" required>
+            </label>
+            <label>
+                标签（用逗号分隔）
+                <input type="text" name="tags" placeholder="meme, 搞笑, 朋友">
+            </label>
+            <button type="submit">上传</button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>按标签筛选</h2>
+        <form method="get" class="stack">
+            <div class="tags-grid">
+                {% for tag in all_tags %}
+                <label class="tag-item">
+                    <input type="checkbox" name="tag" value="{{ tag.name }}" {% if tag.name in selected_tags %}checked{% endif %}>
+                    {{ tag.name }}
+                </label>
+                {% else %}
+                <p>还没有标签，先上传图片吧。</p>
+                {% endfor %}
+            </div>
+            <div class="actions">
+                <button type="submit">应用筛选</button>
+                <a href="{{ url_for('index') }}">清空</a>
+            </div>
+        </form>
+    </section>
+
+    <section>
+        <h2>图片库（总计 {{ total_count }}，当前第 {{ page }}/{{ total_pages }} 页，每页 {{ page_size }} 张）</h2>
+        <div class="gallery">
+            {% for photo in photos %}
+            <article class="photo-card">
+                <img src="{{ url_for('serve_photo', filename=photo.filename) }}" alt="{{ photo.original_name }}">
+                <div class="photo-meta">
+                    <strong>{{ photo.original_name }}</strong>
+                    <div class="tag-list">
+                        {% for tag in tags_by_photo.get(photo.id, []) %}
+                        <span>{{ tag }}</span>
+                        {% else %}
+                        <em>暂无标签</em>
+                        {% endfor %}
+                    </div>
+                    <form action="{{ url_for('add_tags', photo_id=photo.id) }}" method="post" class="inline-form">
+                        <input type="text" name="tags" placeholder="补充标签">
+                        <button type="submit">添加</button>
+                    </form>
+                </div>
+            </article>
+            {% else %}
+            <p>还没有上传任何图片。</p>
+            {% endfor %}
+        </div>
+        <div class="pagination">
+            {% if page > 1 %}
+            <a href="{{ url_for('index', tag=selected_tags, page=page-1) }}">上一页</a>
+            {% endif %}
+            {% if page < total_pages %}
+            <a href="{{ url_for('index', tag=selected_tags, page=page+1) }}">下一页</a>
+            {% endif %}
+        </div>
+    </section>
+</main>
+</body>
+</html>
