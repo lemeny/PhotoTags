@@ -74,6 +74,13 @@ def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+def get_file_extension(filename: str) -> str | None:
+    if "." not in filename:
+        return None
+    extension = filename.rsplit(".", 1)[1].lower()
+    return extension or None
+
+
 def parse_tags(raw: str) -> list[str]:
     cleaned = [tag.strip() for tag in raw.replace("，", ",").split(",")]
     return sorted({tag for tag in cleaned if tag})
@@ -97,8 +104,7 @@ def attach_tags(conn: sqlite3.Connection, photo_id: int, tags: list[str]):
         )
 
 
-def save_uploaded_image(file_storage, original_name: str) -> tuple[str, str]:
-    extension = original_name.rsplit(".", 1)[1].lower()
+def save_uploaded_image(file_storage, extension: str) -> tuple[str, str]:
 
     if extension in {"heic", "heif"}:
         unique_name = f"{uuid4().hex}.jpg"
@@ -286,8 +292,13 @@ def upload_photo():
         flash("仅支持常见图片格式（jpg/png/gif/webp/bmp/heic/heif）。", "error")
         return redirect(url_for("index"))
 
-    original_name = secure_filename(file.filename)
-    unique_name, file_sha256 = save_uploaded_image(file, original_name)
+    extension = get_file_extension(file.filename)
+    if not extension:
+        flash("无法解析文件扩展名，请重命名后重试。", "error")
+        return redirect(url_for("index"))
+
+    original_name = secure_filename(file.filename) or f"upload.{extension}"
+    unique_name, file_sha256 = save_uploaded_image(file, extension)
 
     with get_db_connection() as conn:
         cursor = conn.execute(
