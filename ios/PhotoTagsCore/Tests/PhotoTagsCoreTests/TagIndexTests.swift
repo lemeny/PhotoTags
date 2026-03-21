@@ -59,4 +59,26 @@ struct TagIndexTests {
         #expect(photos?.first?["original_name"] as? String == "IMG_1.HEIC")
         #expect(photos?.first?["file_sha256"] as? String == "abc")
     }
+
+    @Test
+    func lanEnvelope_roundtripMergesPayload() throws {
+        var sender = TagIndex()
+        sender.upsert(photoID: "A", originalName: "IMG_A.HEIC", sha256: "sha-a", tags: ["trip"])
+
+        var receiver = TagIndex()
+        receiver.upsert(photoID: "local-a", originalName: "IMG_A.HEIC", tags: ["old"])
+
+        let store = TagIndexStore(fileURL: URL(fileURLWithPath: "/tmp/phototags-tests/index.json"))
+        let data = try store.exportLANEnvelopeData(from: sender, senderDeviceName: "Alice-iPhone")
+
+        let envelope = try JSONDecoder().decode(LANTransferEnvelope.self, from: data)
+        #expect(envelope.appID == "com.phototags.sync")
+        #expect(envelope.senderDeviceName == "Alice-iPhone")
+        #expect(envelope.payload.photos.count == 1)
+
+        try store.importLANEnvelopeData(data, into: &receiver)
+        let merged = receiver.photosByID["local-a"]
+        #expect(merged?.tags.contains("old") == true)
+        #expect(merged?.tags.contains("trip") == true)
+    }
 }

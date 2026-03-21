@@ -41,4 +41,17 @@ public final class TagIndexStore: @unchecked Sendable {
         let payload = try decoder.decode(SyncPayload.self, from: data)
         tagIndex.merge(syncPayload: payload)
     }
+
+    public func exportLANEnvelopeData(from tagIndex: TagIndex, senderDeviceName: String) throws -> Data {
+        let envelope = LANTransferEnvelope(
+            senderDeviceName: senderDeviceName,
+            payload: tagIndex.exportSyncPayload()
+        )
+        return try encoder.encode(envelope)
+    }
+
+    public func importLANEnvelopeData(_ data: Data, into tagIndex: inout TagIndex) throws {
+        let envelope = try decoder.decode(LANTransferEnvelope.self, from: data)
+        tagIndex.merge(syncPayload: envelope.payload)
+    }
 }

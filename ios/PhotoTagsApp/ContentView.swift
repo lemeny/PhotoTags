@@ -1,5 +1,6 @@
 import SwiftUI
 import Photos
+import MultipeerConnectivity
 
 struct ContentView: View {
     @ObservedObject var viewModel: PhotoTagsViewModel
@@ -15,6 +16,7 @@ struct ContentView: View {
                 filterBar
                 tagEditor
                 actionBar
+                lanTransferPanel
 
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 8)], spacing: 8) {
@@ -36,6 +38,10 @@ struct ContentView: View {
             .navigationTitle("PhotoTags iOS")
             .task {
                 await viewModel.requestPermissionAndLoadAssets()
+                viewModel.startLANDiscovery()
+            }
+            .onDisappear {
+                viewModel.stopLANDiscovery()
             }
             .alert("提示", isPresented: Binding(get: {
                 viewModel.message != nil
@@ -104,6 +110,37 @@ struct ContentView: View {
             }
             .buttonStyle(.bordered)
         }
+    }
+
+    private var lanTransferPanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("局域网传输（LocalSend 风格）")
+                .font(.headline)
+            Text("当前设备：\(viewModel.localDeviceName)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            if viewModel.nearbyPeers.isEmpty {
+                Text("未发现可用设备，请确保双方都打开本页面且在同一 Wi‑Fi。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ForEach(viewModel.nearbyPeers, id: \.self) { peer in
+                    HStack {
+                        Text(peer.displayName)
+                        Spacer()
+                        Button("发送标签") {
+                            viewModel.sendCurrentTagsToPeer(peer)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 8)
     }
 
     private func toggleSelection(_ id: String) {

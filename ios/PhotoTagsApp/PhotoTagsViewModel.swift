@@ -1,6 +1,7 @@
 import Foundation
 import Photos
 import SwiftUI
+import MultipeerConnectivity
 import PhotoTagsCore
 
 @MainActor
@@ -10,13 +11,17 @@ final class PhotoTagsViewModel: ObservableObject {
     @Published var currentTagInput: String = ""
     @Published var selectedFilterTags: Set<String> = []
     @Published var message: String?
+    @Published var nearbyPeers: [MCPeerID] = []
 
     @Published private(set) var index: TagIndex = .init()
 
     private let store: TagIndexStore
+    private let lanTransfer: LANTransferService
 
-    init(store: TagIndexStore) {
+    init(store: TagIndexStore, lanTransfer: LANTransferService = LANTransferService()) {
         self.store = store
+        self.lanTransfer = lanTransfer
+        bindLANTransferCallbacks()
         loadIndex()
     }
 
@@ -54,6 +59,18 @@ final class PhotoTagsViewModel: ObservableObject {
             items.append(asset)
         }
         assets = items
+    }
+
+    func startLANDiscovery() {
+        lanTransfer.start()
+    }
+
+    func stopLANDiscovery() {
+        lanTransfer.stop()
+    }
+
+    var localDeviceName: String {
+        lanTransfer.deviceName
     }
 
     var allTags: [String] {
@@ -109,6 +126,36 @@ final class PhotoTagsViewModel: ObservableObject {
             message = "导入并合并成功。"
         } catch {
             message = "导入失败：\(error.localizedDescription)"
+        }
+    }
+
+    func sendCurrentTagsToPeer(_ peer: MCPeerID) {
+        do {
+            let data = try store.exportLANEnvelopeData(from: index, senderDeviceName: localDeviceName)
+            try lanTransfer.send(envelopeData: data, to: peer)
+            message = "标签数据已发送到：\(peer.displayName)"
+        } catch {
+            message = "发送失败：\(error.localizedDescription)"
+        }
+    }
+
+    private func bindLANTransferCallbacks() {
+        lanTransfer.onStateMessage = { [weak self] text in
+            self?.message = text
+            self?.nearbyPeers = self?.lanTransfer.nearbyPeers ?? []
+        }
+
+        lanTransfer.onReceiveEnvelopeData = { [weak self] data, peer in
+            guard let self else { return }
+            do {
+                var mutable = self.index
+                try self.store.importLANEnvelopeData(data, into: &mutable)
+                self.index = mutable
+                self.saveIndex()
+                self.message = "已接收并合并来自 \(peer.displayName) 的标签数据。"
+            } catch {
+                self.message = "接收数据解析失败：\(error.localizedDescription)"
+            }
         }
     }
 

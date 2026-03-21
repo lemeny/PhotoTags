@@ -51,7 +51,7 @@ python app.py
 
 仓库已新增 `ios/` 目录：
 - `ios/PhotoTagsCore`：可测试的核心逻辑（标签解析、搜索、导入导出 JSON 合并）
-- `ios/PhotoTagsApp`：SwiftUI iOS App 源码（读取系统相册、打标签、按标签搜索、导入导出）
+- `ios/PhotoTagsApp`：SwiftUI iOS App 源码（读取系统相册、打标签、按标签搜索、导入导出、局域网传输）
 
 ### 本地运行核心测试
 

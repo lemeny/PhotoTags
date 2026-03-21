@@ -46,3 +46,25 @@ public struct SyncPayload: Codable, Equatable, Sendable {
         self.photos = photos
     }
 }
+
+public struct LANTransferEnvelope: Codable, Equatable, Sendable {
+    public var protocolVersion: Int
+    public var appID: String
+    public var senderDeviceName: String
+    public var sentAt: Date
+    public var payload: SyncPayload
+
+    public init(
+        protocolVersion: Int = 1,
+        appID: String = "com.phototags.sync",
+        senderDeviceName: String,
+        sentAt: Date = Date(),
+        payload: SyncPayload
+    ) {
+        self.protocolVersion = protocolVersion
+        self.appID = appID
+        self.senderDeviceName = senderDeviceName
+        self.sentAt = sentAt
+        self.payload = payload
+    }
+}
