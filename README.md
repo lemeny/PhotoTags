@@ -46,3 +46,20 @@ python app.py
 - Pillow + pillow-heif（HEIC/HEIF 转换）
 - 图片文件存储在 `uploads/`
 - 数据存储在 `phototags.db`
+
+## iOS 独立 App（测试版源码）
+
+仓库已新增 `ios/` 目录：
+- `ios/PhotoTagsCore`：可测试的核心逻辑（标签解析、搜索、导入导出 JSON 合并）
+- `ios/PhotoTagsApp`：SwiftUI iOS App 源码（读取系统相册、打标签、按标签搜索、导入导出、局域网传输）
+
+### 本地运行核心测试
+
+```bash
+cd ios/PhotoTagsCore
+swift test
+```
+
+### 在 iPhone 安装 Debug 测试版
+
+请在 macOS + Xcode 16+ 环境按 `ios/PhotoTagsApp/README.md` 步骤进行签名并安装。
